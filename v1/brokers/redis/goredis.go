@@ -158,7 +158,7 @@ func (b *BrokerGR) StartConsuming(consumerTag string, concurrency int, taskProce
 					// immediately since we might have some more ready tasks.
 					// If there are no pending tasks, nextDelayedTask()
 					// will return redis.Nil and we'll sleep then.
-					time.Sleep(time.Duration(b.delayedTasksPollPeriod) * time.Millisecond)
+					time.Sleep(b.delayedTasksPollPeriod)
 					continue
 				}
 
