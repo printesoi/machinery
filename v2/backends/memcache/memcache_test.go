@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/RichardKnop/machinery/v2/backends/memcache"
-	"github.com/RichardKnop/machinery/v2/config"
-	"github.com/RichardKnop/machinery/v2/tasks"
+	"github.com/printesoi/machinery/v2/backends/memcache"
+	"github.com/printesoi/machinery/v2/config"
+	"github.com/printesoi/machinery/v2/tasks"
 	"github.com/stretchr/testify/assert"
 )
 

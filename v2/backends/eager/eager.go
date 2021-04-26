@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/RichardKnop/machinery/v2/backends/iface"
-	"github.com/RichardKnop/machinery/v2/common"
-	"github.com/RichardKnop/machinery/v2/config"
-	"github.com/RichardKnop/machinery/v2/tasks"
+	"github.com/printesoi/machinery/v2/backends/iface"
+	"github.com/printesoi/machinery/v2/common"
+	"github.com/printesoi/machinery/v2/config"
+	"github.com/printesoi/machinery/v2/tasks"
 )
 
 // ErrGroupNotFound ...
