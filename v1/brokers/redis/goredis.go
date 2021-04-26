@@ -30,10 +30,11 @@ type BrokerGR struct {
 	processingWG sync.WaitGroup // use wait group to make sure task processing completes
 	delayedWG    sync.WaitGroup
 	// If set, path to a socket file overrides hostname
-	socketPath           string
-	redsync              *redsync.Redsync
-	redisOnce            sync.Once
-	redisDelayedTasksKey string
+	socketPath             string
+	redsync                *redsync.Redsync
+	redisOnce              sync.Once
+	redisDelayedTasksKey   string
+	delayedTasksPollPeriod time.Duration
 }
 
 // NewGR creates new Broker instance
@@ -63,6 +64,17 @@ func NewGR(cnf *config.Config, addrs []string, db int) iface.Broker {
 	} else {
 		b.redisDelayedTasksKey = defaultRedisDelayedTasksKey
 	}
+
+	pollPeriod := 500 // default poll period for delayed tasks
+	if b.GetConfig().Redis != nil {
+		configuredPollPeriod := b.GetConfig().Redis.DelayedTasksPollPeriod
+		// the default period is 0, which bombards redis with requests, despite
+		// our intention of doing the opposite
+		if configuredPollPeriod > 0 {
+			pollPeriod = configuredPollPeriod
+		}
+	}
+	b.delayedTasksPollPeriod = time.Duration(pollPeriod) * time.Millisecond
 	return b
 }
 
@@ -140,6 +152,13 @@ func (b *BrokerGR) StartConsuming(consumerTag string, concurrency int, taskProce
 			default:
 				task, err := b.nextDelayedTask(b.redisDelayedTasksKey)
 				if err != nil {
+					// Space out queries to ZSET so we don't bombard redis
+					// server with relentless ZRANGEBYSCOREs. Only sleep on
+					// error because if we popped an item, we want to try again
+					// immediately since we might have some more ready tasks.
+					// If there are no pending tasks, nextDelayedTask()
+					// will return redis.Nil and we'll sleep then.
+					time.Sleep(time.Duration(b.delayedTasksPollPeriod) * time.Millisecond)
 					continue
 				}
 
@@ -362,54 +381,34 @@ func (b *BrokerGR) nextDelayedTask(key string) (result []byte, err error) {
 		items []string
 	)
 
-	pollPeriod := 500 // default poll period for delayed tasks
-	if b.GetConfig().Redis != nil {
-		configuredPollPeriod := b.GetConfig().Redis.DelayedTasksPollPeriod
-		// the default period is 0, which bombards redis with requests, despite
-		// our intention of doing the opposite
-		if configuredPollPeriod > 0 {
-			pollPeriod = configuredPollPeriod
-		}
-	}
+	watchFunc := func(tx *redis.Tx) error {
 
-	for {
-		// Space out queries to ZSET so we don't bombard redis
-		// server with relentless ZRANGEBYSCOREs
-		time.Sleep(time.Duration(pollPeriod) * time.Millisecond)
-		watchFunc := func(tx *redis.Tx) error {
+		now := time.Now().UTC().UnixNano()
 
-			now := time.Now().UTC().UnixNano()
-
-			// https://redis.io/commands/zrangebyscore
-			ctx := context.Background()
-			items, err = tx.ZRevRangeByScore(ctx, key, &redis.ZRangeBy{
-				Min: "0", Max: strconv.FormatInt(now, 10), Offset: 0, Count: 1,
-			}).Result()
-			if err != nil {
-				return err
-			}
-			if len(items) != 1 {
-				return redis.Nil
-			}
-
-			// only return the first zrange value if there are no other changes in this key
-			// to make sure a delayed task would only be consumed once
-			_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
-				pipe.ZRem(ctx, key, items[0])
-				result = []byte(items[0])
-				return nil
-			})
-
+		// https://redis.io/commands/zrangebyscore
+		ctx := context.Background()
+		items, err = tx.ZRangeByScore(ctx, key, &redis.ZRangeBy{
+			Min: "0", Max: strconv.FormatInt(now, 10), Offset: 0, Count: 1,
+		}).Result()
+		if err != nil {
 			return err
 		}
-
-		if err = b.rclient.Watch(context.Background(), watchFunc, key); err != nil {
-			return
-		} else {
-			break
+		if len(items) != 1 {
+			return redis.Nil
 		}
+
+		// only return the first zrange value if there are no other changes in this key
+		// to make sure a delayed task would only be consumed once
+		_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+			pipe.ZRem(ctx, key, items[0])
+			result = []byte(items[0])
+			return nil
+		})
+
+		return err
 	}
 
+	err = b.rclient.Watch(context.Background(), watchFunc, key)
 	return
 }
 
