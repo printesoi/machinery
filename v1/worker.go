@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	
+
 	"github.com/printesoi/machinery/v1/backends/amqp"
 	"github.com/printesoi/machinery/v1/brokers/errs"
 	"github.com/printesoi/machinery/v1/log"
@@ -191,6 +191,11 @@ func (worker *Worker) Process(signature *tasks.Signature) error {
 		// Otherwise, execute default retry logic based on signature.RetryCount
 		// and signature.RetryTimeout values
 		if signature.RetryCount > 0 {
+			// If a tasks.ErrUnrecoverable was returned from the task,
+			// don't retry the task.
+			if unrecoverableErr, ok := err.(tasks.ErrUnrecoverable); ok {
+				return worker.taskFailed(signature, unrecoverableErr)
+			}
 			return worker.taskRetry(signature)
 		}
 
