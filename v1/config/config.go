@@ -85,6 +85,7 @@ type AMQPConfig struct {
 	BindingKey       string           `yaml:"binding_key" envconfig:"AMQP_BINDING_KEY"`
 	PrefetchCount    int              `yaml:"prefetch_count" envconfig:"AMQP_PREFETCH_COUNT"`
 	AutoDelete       bool             `yaml:"auto_delete" envconfig:"AMQP_AUTO_DELETE"`
+	DelayedQueue     string           `yaml:"delayed_queue" envconfig:"AMQP_DELAYED_QUEUE"`
 }
 
 // DynamoDBConfig wraps DynamoDB related configuration
@@ -146,6 +147,9 @@ type RedisConfig struct {
 	// Default: 20
 	DelayedTasksPollPeriod int    `yaml:"delayed_tasks_poll_period" envconfig:"REDIS_DELAYED_TASKS_POLL_PERIOD"`
 	DelayedTasksKey        string `yaml:"delayed_tasks_key" envconfig:"REDIS_DELAYED_TASKS_KEY"`
+
+	// ClientName specifies the redis client name to be set when connecting to the Redis server
+	ClientName string `yaml:"client_name" envconfig:"REDIS_CLIENT_NAME"`
 
 	// MasterName specifies a redis master name in order to configure a sentinel-backed redis FailoverClient
 	MasterName string `yaml:"master_name" envconfig:"REDIS_MASTER_NAME"`

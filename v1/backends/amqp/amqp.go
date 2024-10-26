@@ -25,7 +25,7 @@ import (
 	"github.com/printesoi/machinery/v1/config"
 	"github.com/printesoi/machinery/v1/log"
 	"github.com/printesoi/machinery/v1/tasks"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // Backend represents an AMQP result backend

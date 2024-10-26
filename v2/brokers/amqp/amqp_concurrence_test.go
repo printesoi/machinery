@@ -2,12 +2,13 @@ package amqp
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/printesoi/machinery/v2/brokers/iface"
 	"github.com/printesoi/machinery/v2/config"
 	"github.com/printesoi/machinery/v2/tasks"
-	"github.com/streadway/amqp"
-	"testing"
-	"time"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type doNothingProcessor struct{}

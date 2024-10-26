@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/go-redsync/redsync/v4"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/printesoi/machinery/v2/brokers/errs"
 	"github.com/printesoi/machinery/v2/brokers/iface"
@@ -57,8 +57,12 @@ func NewGR(cnf *config.Config, addrs []string, db int) iface.Broker {
 		ropt.MasterName = cnf.Redis.MasterName
 	}
 
-	b.rclient = redis.NewUniversalClient(ropt)
-	if cnf.Redis.DelayedTasksKey != "" {
+	if cnf.Redis != nil && cnf.Redis.ClusterEnabled {
+		b.rclient = redis.NewClusterClient(ropt.Cluster())
+	} else {
+		b.rclient = redis.NewUniversalClient(ropt)
+	}
+	if cnf.Redis != nil && cnf.Redis.DelayedTasksKey != "" {
 		b.redisDelayedTasksKey = cnf.Redis.DelayedTasksKey
 	} else {
 		b.redisDelayedTasksKey = defaultRedisDelayedTasksKey
@@ -195,7 +199,7 @@ func (b *BrokerGR) Publish(ctx context.Context, signature *tasks.Signature) erro
 
 		if signature.ETA.After(now) {
 			score := signature.ETA.UnixNano()
-			err = b.rclient.ZAdd(context.Background(), b.redisDelayedTasksKey, &redis.Z{Score: float64(score), Member: msg}).Err()
+			err = b.rclient.ZAdd(context.Background(), b.redisDelayedTasksKey, redis.Z{Score: float64(score), Member: msg}).Err()
 			return err
 		}
 	}

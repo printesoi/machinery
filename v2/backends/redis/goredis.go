@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/go-redsync/redsync/v4"
-	redsyncgoredis "github.com/go-redsync/redsync/v4/redis/goredis/v8"
+	redsyncgoredis "github.com/go-redsync/redsync/v4/redis/goredis/v9"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/printesoi/machinery/v2/backends/iface"
 	"github.com/printesoi/machinery/v2/common"
@@ -53,7 +53,11 @@ func NewGR(cnf *config.Config, addrs []string, db int) iface.Backend {
 		ropt.MasterName = cnf.Redis.MasterName
 	}
 
-	b.rclient = redis.NewUniversalClient(ropt)
+	if cnf.Redis != nil && cnf.Redis.ClusterEnabled {
+		b.rclient = redis.NewClusterClient(ropt.Cluster())
+	} else {
+		b.rclient = redis.NewUniversalClient(ropt)
+	}
 	b.redsync = redsync.New(redsyncgoredis.NewPool(b.rclient))
 	return b
 }
