@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"runtime"
@@ -36,10 +37,11 @@ type Broker struct {
 	processingWG sync.WaitGroup // use wait group to make sure task processing completes
 	delayedWG    sync.WaitGroup
 	// If set, path to a socket file overrides hostname
-	socketPath           string
-	redsync              *redsync.Redsync
-	redisOnce            sync.Once
-	redisDelayedTasksKey string
+	socketPath             string
+	redsync                *redsync.Redsync
+	redisOnce              sync.Once
+	redisDelayedTasksKey   string
+	delayedTasksPollPeriod time.Duration
 }
 
 // New creates new Broker instance
@@ -55,6 +57,17 @@ func New(cnf *config.Config, host, password, socketPath string, db int) iface.Br
 	} else {
 		b.redisDelayedTasksKey = defaultRedisDelayedTasksKey
 	}
+
+	pollPeriod := 500 // default poll period for delayed tasks
+	if b.GetConfig().Redis != nil {
+		configuredPollPeriod := b.GetConfig().Redis.DelayedTasksPollPeriod
+		// the default period is 0, which bombards redis with requests, despite
+		// our intention of doing the opposite
+		if configuredPollPeriod > 0 {
+			pollPeriod = configuredPollPeriod
+		}
+	}
+	b.delayedTasksPollPeriod = time.Duration(pollPeriod) * time.Millisecond
 
 	return b
 }
@@ -145,6 +158,13 @@ func (b *Broker) StartConsuming(consumerTag string, concurrency int, taskProcess
 			default:
 				task, err := b.nextDelayedTask(b.redisDelayedTasksKey)
 				if err != nil {
+					// Space out queries to ZSET so we don't bombard redis
+					// server with relentless ZRANGEBYSCOREs. Only sleep on
+					// error because if we popped an item, we want to try again
+					// immediately since we might have some more ready tasks.
+					// If there are no pending tasks, nextDelayedTask()
+					// will return redis.ErrNil and we'll sleep then.
+					time.Sleep(b.delayedTasksPollPeriod)
 					continue
 				}
 
@@ -408,56 +428,42 @@ func (b *Broker) nextDelayedTask(key string) (result []byte, err error) {
 		reply interface{}
 	)
 
-	pollPeriod := 500 // default poll period for delayed tasks
-	if b.GetConfig().Redis != nil {
-		configuredPollPeriod := b.GetConfig().Redis.DelayedTasksPollPeriod
-		// the default period is 0, which bombards redis with requests, despite
-		// our intention of doing the opposite
-		if configuredPollPeriod > 0 {
-			pollPeriod = configuredPollPeriod
-		}
+	if _, err = conn.Do("WATCH", key); err != nil {
+		return
 	}
 
-	for {
-		// Space out queries to ZSET so we don't bombard redis
-		// server with relentless ZRANGEBYSCOREs
-		time.Sleep(time.Duration(pollPeriod) * time.Millisecond)
-		if _, err = conn.Do("WATCH", key); err != nil {
-			return
-		}
+	now := time.Now().UTC().UnixNano()
 
-		now := time.Now().UTC().UnixNano()
-
-		// https://redis.io/commands/zrangebyscore
-		items, err = redis.ByteSlices(conn.Do(
-			"ZRANGEBYSCORE",
-			key,
-			0,
-			now,
-			"LIMIT",
-			0,
-			1,
-		))
-		if err != nil {
-			return
-		}
-		if len(items) != 1 {
-			err = redis.ErrNil
-			return
-		}
-
-		_ = conn.Send("MULTI")
-		_ = conn.Send("ZREM", key, items[0])
-		reply, err = conn.Do("EXEC")
-		if err != nil {
-			return
-		}
-
-		if reply != nil {
-			result = items[0]
-			break
-		}
+	// https://redis.io/commands/zrangebyscore
+	items, err = redis.ByteSlices(conn.Do(
+		"ZRANGEBYSCORE",
+		key,
+		0,
+		now,
+		"LIMIT",
+		0,
+		1,
+	))
+	if err != nil {
+		return
 	}
+	if len(items) != 1 {
+		err = redis.ErrNil
+		return
+	}
+
+	_ = conn.Send("MULTI")
+	_ = conn.Send("ZREM", key, items[0])
+	reply, err = conn.Do("EXEC")
+	if err != nil {
+		return
+	}
+	if reply == nil {
+		err = errors.New("transaction failed")
+		return
+	}
+
+	result = items[0]
 
 	return
 }
