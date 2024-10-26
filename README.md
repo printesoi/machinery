@@ -1200,16 +1200,16 @@ This is one of slight weaknesses of Go as dependency management is not a solved 
 
 #### Testing
 
-Easiest (and platform agnostic) way to run tests is via `docker-compose`:
+Easiest (and platform agnostic) way to run tests is via `docker compose`:
 
 ```sh
 make ci
 ```
 
-This will basically run docker-compose command:
+This will basically run docker compose command:
 
 ```sh
-(docker-compose -f docker-compose.test.yml -p machinery_ci up --build -d) && (docker logs -f machinery_sut &) && (docker wait machinery_sut)
+(docker compose -f docker-compose.test.yml -p machinery_ci up --build -d) && (docker logs -f machinery_sut &) && (docker wait machinery_sut)
 ```
 
 Alternative approach is to setup a development environment on your machine.

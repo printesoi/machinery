@@ -17,5 +17,9 @@ ADD . /go/src/github.com/printesoi/machinery
 # Set GO111MODULE=on variable to activate module support
 ENV GO111MODULE on
 
+# Run this to make the test directory safe so that we don't get the 'error
+# obtaining VCS status: exit status 128' error
+RUN git config --global --add safe.directory /go/src/github.com/printesoi/machinery
+
 # Run integration tests as default command
 CMD /go/src/github.com/printesoi/machinery/wait-for-it.sh rabbitmq:5672 -- make test-with-coverage

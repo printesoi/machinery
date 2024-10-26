@@ -35,4 +35,4 @@ test-with-coverage:
 	#go tool cover -html=coverage-all.out
 
 ci:
-	bash -c 'docker-compose -f docker-compose.test.yml -p machinery_ci up --build --abort-on-container-exit --exit-code-from sut'
+	bash -c 'docker compose -f docker-compose.test.yml -p machinery_ci up --build --abort-on-container-exit --exit-code-from sut'
