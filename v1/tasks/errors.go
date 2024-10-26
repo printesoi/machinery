@@ -31,6 +31,8 @@ type Retriable interface {
 	RetryIn() time.Duration
 }
 
+// ErrUnrecoverable is an unrecoverable error, ie. the task will not be
+// retried.
 type ErrUnrecoverable struct {
 	error
 }
@@ -46,10 +48,12 @@ func IsUnrecoverable(err error) bool {
 	return isUnrecoverable
 }
 
-func UnpackUnrecoverable(err error) error {
+// UnpackUnrecoverable checks if err is unrecoverable and returns the wrapped
+// error.
+func UnpackUnrecoverable(err error) (isUnrecoverable bool, werr error) {
 	if unrecoverable, isUnrecoverable := err.(ErrUnrecoverable); isUnrecoverable {
-		return unrecoverable.error
+		return true, unrecoverable.error
 	}
 
-	return err
+	return false, err
 }

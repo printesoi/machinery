@@ -30,3 +30,30 @@ func NewErrRetryTaskLater(msg string, retryIn time.Duration) ErrRetryTaskLater {
 type Retriable interface {
 	RetryIn() time.Duration
 }
+
+// ErrUnrecoverable is an unrecoverable error, ie. the task will not be
+// retried.
+type ErrUnrecoverable struct {
+	error
+}
+
+// Unrecoverable wraps an error in `ErrUnrecoverable` struct
+func Unrecoverable(err error) error {
+	return ErrUnrecoverable{err}
+}
+
+// IsUnrecoverable checks if error is an instance of `ErrUnrecoverable`
+func IsUnrecoverable(err error) bool {
+	_, isUnrecoverable := err.(ErrUnrecoverable)
+	return isUnrecoverable
+}
+
+// UnpackUnrecoverable checks if err is unrecoverable and returns the wrapped
+// error.
+func UnpackUnrecoverable(err error) (isUnrecoverable bool, werr error) {
+	if unrecoverable, isUnrecoverable := err.(ErrUnrecoverable); isUnrecoverable {
+		return true, unrecoverable.error
+	}
+
+	return false, err
+}

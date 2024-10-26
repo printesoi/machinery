@@ -188,14 +188,15 @@ func (worker *Worker) Process(signature *tasks.Signature) error {
 			return worker.retryTaskIn(signature, retriableErr.RetryIn())
 		}
 
+		// If a tasks.ErrUnrecoverable error was returned from the task,
+		// don't retry it.
+		if isUnrecoverable, err := tasks.UnpackUnrecoverable(err); isUnrecoverable {
+			return worker.taskFailed(signature, err)
+		}
+
 		// Otherwise, execute default retry logic based on signature.RetryCount
 		// and signature.RetryTimeout values
 		if signature.RetryCount > 0 {
-			// If a tasks.ErrUnrecoverable was returned from the task,
-			// don't retry the task.
-			if unrecoverableErr, ok := err.(tasks.ErrUnrecoverable); ok {
-				return worker.taskFailed(signature, unrecoverableErr)
-			}
 			return worker.taskRetry(signature)
 		}
 
