@@ -103,6 +103,7 @@ func (b *Broker) StartConsuming(consumerTag string, concurrency int, taskProcess
 	// Channel to which we will push tasks ready for processing by worker
 	deliveries := make(chan []byte, concurrency)
 	pool := make(chan struct{}, concurrency)
+	stopConsumer := make(chan struct{})
 
 	// initialize worker pool with maxWorkers workers
 	for i := 0; i < concurrency; i++ {
@@ -120,6 +121,9 @@ func (b *Broker) StartConsuming(consumerTag string, concurrency int, taskProcess
 			select {
 			// A way to stop this goroutine from b.StopConsuming
 			case <-b.GetStopChan():
+				close(deliveries)
+				return
+			case <-stopConsumer:
 				close(deliveries)
 				return
 			case <-pool:
@@ -154,6 +158,8 @@ func (b *Broker) StartConsuming(consumerTag string, concurrency int, taskProcess
 			// A way to stop this goroutine from b.StopConsuming
 			case <-b.GetStopChan():
 				return
+			case <-stopConsumer:
+				return
 			default:
 				task, err := b.nextDelayedTask(b.redisDelayedTasksKey)
 				if err != nil {
@@ -181,7 +187,7 @@ func (b *Broker) StartConsuming(consumerTag string, concurrency int, taskProcess
 		}
 	}()
 
-	if err := b.consume(deliveries, concurrency, taskProcessor); err != nil {
+	if err := b.consume(deliveries, concurrency, taskProcessor, stopConsumer); err != nil {
 		return b.GetRetry(), err
 	}
 
@@ -294,7 +300,7 @@ func (b *Broker) GetDelayedTasks() ([]*tasks.Signature, error) {
 
 // consume takes delivered messages from the channel and manages a worker pool
 // to process tasks concurrently
-func (b *Broker) consume(deliveries <-chan []byte, concurrency int, taskProcessor iface.TaskProcessor) error {
+func (b *Broker) consume(deliveries <-chan []byte, concurrency int, taskProcessor iface.TaskProcessor, stopConsumer chan struct{}) error {
 	errorsChan := make(chan error, concurrency*2)
 	pool := make(chan struct{}, concurrency)
 
@@ -308,6 +314,10 @@ func (b *Broker) consume(deliveries <-chan []byte, concurrency int, taskProcesso
 	for {
 		select {
 		case err := <-errorsChan:
+			close(stopConsumer)
+			for v := range deliveries {
+				b.requeueMessage(v, taskProcessor)
+			}
 			return err
 		case d, open := <-deliveries:
 			if !open {
