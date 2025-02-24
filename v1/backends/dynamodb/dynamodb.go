@@ -8,15 +8,15 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	"github.com/printesoi/machinery/v1/backends/iface"
 	"github.com/printesoi/machinery/v1/common"
 	"github.com/printesoi/machinery/v1/config"
 	"github.com/printesoi/machinery/v1/log"
 	"github.com/printesoi/machinery/v1/tasks"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
 
 const (

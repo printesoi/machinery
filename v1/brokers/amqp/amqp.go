@@ -8,13 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/printesoi/machinery/v1/brokers/errs"
 	"github.com/printesoi/machinery/v1/brokers/iface"
 	"github.com/printesoi/machinery/v1/common"
 	"github.com/printesoi/machinery/v1/config"
 	"github.com/printesoi/machinery/v1/log"
 	"github.com/printesoi/machinery/v1/tasks"
-	"github.com/pkg/errors"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 

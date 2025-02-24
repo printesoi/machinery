@@ -4,11 +4,11 @@ import (
 	"errors"
 	"os"
 
-	"github.com/printesoi/machinery/v1/config"
-	"github.com/printesoi/machinery/v1/tasks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
+	"github.com/printesoi/machinery/v1/config"
+	"github.com/printesoi/machinery/v1/tasks"
 )
 
 var (

@@ -324,9 +324,7 @@ func (s *EagerBackendTestSuite) TestPurgeGroupMeta() {
 	}
 }
 
-//
 // internal method
-//
 func (s *EagerBackendTestSuite) getTaskSignature(taskUUID string) *tasks.Signature {
 	for _, v := range s.st {
 		if v.UUID == taskUUID {

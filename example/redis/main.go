@@ -15,10 +15,10 @@ import (
 	"github.com/printesoi/machinery/v1/log"
 	"github.com/printesoi/machinery/v1/tasks"
 
-	exampletasks "github.com/printesoi/machinery/example/tasks"
-	tracers "github.com/printesoi/machinery/example/tracers"
 	opentracing "github.com/opentracing/opentracing-go"
 	opentracing_log "github.com/opentracing/opentracing-go/log"
+	exampletasks "github.com/printesoi/machinery/example/tasks"
+	tracers "github.com/printesoi/machinery/example/tracers"
 )
 
 var (

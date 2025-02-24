@@ -18,10 +18,10 @@ import (
 	"github.com/printesoi/machinery/v1/tracing"
 	"github.com/printesoi/machinery/v1/utils"
 
+	opentracing "github.com/opentracing/opentracing-go"
 	backendsiface "github.com/printesoi/machinery/v1/backends/iface"
 	brokersiface "github.com/printesoi/machinery/v1/brokers/iface"
 	lockiface "github.com/printesoi/machinery/v1/locks/iface"
-	opentracing "github.com/opentracing/opentracing-go"
 )
 
 // Server is the main Machinery object and stores all configuration
