@@ -5,7 +5,7 @@ services:
     container_name: machinery_sut
     image: machinery_sut:latest
     volumes:
-      - "./:/go/src/github.com/RichardKnop/machinery/v2"
+      - "./:/go/src/github.com/printesoi/machinery/v2"
     depends_on:
       - rabbitmq
       - redis

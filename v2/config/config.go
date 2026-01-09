@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/pubsub"
-	dynamodbiface "github.com/RichardKnop/machinery/v2/backends/iface/dynamodb"
-	"github.com/RichardKnop/machinery/v2/brokers/iface/sqs"
+	dynamodbiface "github.com/printesoi/machinery/v2/backends/iface/dynamodb"
+	"github.com/printesoi/machinery/v2/brokers/iface/sqs"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
